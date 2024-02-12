@@ -128,6 +128,7 @@ contract RPS is CommitReveal{
         if (block.timestamp > tsAddP0 + 1 hours && tsAddP1 == 0) {
             // only one player
             account0.transfer(reward);
+            _resetState();
         }
         else if (block.timestamp > tsAddP1 + 1 hours && (tsInputP0==0 || tsInputP1==0)) {
             // there's a player who did not choose the choice
@@ -144,11 +145,13 @@ contract RPS is CommitReveal{
                 account0.transfer(reward / 2);
                 account1.transfer(reward / 2);
             }
+            _resetState();
         }
         else if (block.timestamp > tsResult + 1 hours && winnerReveal == false) {
             // winner did not reveal answer
             account0.transfer(reward / 2);
             account1.transfer(reward / 2);
+            _resetState();
         }
     }
 
