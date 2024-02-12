@@ -102,6 +102,22 @@ contract RPS is CommitReveal{
             account0.transfer(reward / 2);
             account1.transfer(reward / 2);
         }
+        _resetState();
+    }
+
+    function _resetState() private {
+        numPlayer = 0;
+        reward = 0;
+        numInput = 0;
+        p0Choice = 3;
+        p1Choice = 3;
+        winner = 3;
+        tsAddP0 = 0;
+        tsAddP1 = 0;
+        tsInputP0 = 0;
+        tsInputP1 = 0;
+        tsResult = 0;
+        winnerReveal = false;
     }
 
     function withdraw(uint idx) public {
