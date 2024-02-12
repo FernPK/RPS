@@ -82,6 +82,7 @@ contract RPS is CommitReveal{
         require(msg.sender == player[idx].addr);
         require(idx==0 || idx==1);
         require(winner<3);
+        require(block.timestamp <= tsResult + 1 hours);
         if (idx==0){
             revealAnswer(bytes32(p0Choice), bytes32(salt));
             winnerReveal = true;
