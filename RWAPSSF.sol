@@ -152,4 +152,16 @@ contract RPS is CommitReveal{
         }
     }
 
+    function checkIdx() external view returns(uint) {
+        if (player[0].addr == msg.sender) {
+            require(numPlayer > 0);
+            return 0;
+        }
+        else if (player[1].addr == msg.sender) {
+            require(numPlayer > 1);
+            return 1;
+        }
+        return 2; // not a player
+    }
+
 }
