@@ -39,10 +39,11 @@ contract RPS is CommitReveal{
     }
 
     function input(uint choice, uint idx, uint salt) public  {
+        // choice 0 - rock, 1 - water, 2 - air, 3 - paper, 4 - sponge, 5 - scissors, 6 - fire
         require(numPlayer == 2);
         require(msg.sender == player[idx].addr);
         require(idx==0 || idx==1);
-        require(choice == 0 || choice == 1 || choice == 2); // change to use string or enum for user-friendly
+        require(choice < 7);
         if (idx==0) {
             p0Choice = choice;
             tsInputP0 = block.timestamp;
@@ -60,10 +61,10 @@ contract RPS is CommitReveal{
     }
 
     function _checkWinner() private {
-        if ((p0Choice + 1) % 3 == p1Choice) { //p0 lose, p1 win
+        if ((p0Choice + 1) % 7 == p1Choice || (p0Choice + 2) % 7 == p1Choice || (p0Choice + 3) % 7 == p1Choice) { //p0 lose, p1 win
             winner = 1;
         }
-        else if ((p1Choice + 1) % 3 == p0Choice) { //p1 lose, p0 win
+        else if ((p1Choice + 1) % 7 == p0Choice || (p1Choice + 2) % 7 == p0Choice || (p1Choice + 3) % 7 == p0Choice) { //p1 lose, p0 win
             winner = 0;  
         }
         else {
