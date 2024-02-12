@@ -44,6 +44,7 @@ contract RPS is CommitReveal{
         require(msg.sender == player[idx].addr);
         require(idx==0 || idx==1);
         require(choice < 7);
+        require(block.timestamp <= tsAddP1 + 1 hours);
         if (idx==0) {
             p0Choice = choice;
             tsInputP0 = block.timestamp;
