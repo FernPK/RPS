@@ -61,6 +61,8 @@ contract RPS is CommitReveal{
     }
 
     function _checkWinner() private {
+        address payable account0 = payable(player[0].addr);
+        address payable account1 = payable(player[1].addr); 
         if ((p0Choice + 1) % 7 == p1Choice || (p0Choice + 2) % 7 == p1Choice || (p0Choice + 3) % 7 == p1Choice) { //p0 lose, p1 win
             winner = 1;
         }
@@ -69,6 +71,9 @@ contract RPS is CommitReveal{
         }
         else {
             winner = 2; // tie
+            account0.transfer(reward / 2);
+            account1.transfer(reward / 2);
+            _resetState();
         }
         tsResult = block.timestamp;
     }
@@ -80,12 +85,12 @@ contract RPS is CommitReveal{
         if (idx==0){
             revealAnswer(bytes32(p0Choice), bytes32(salt));
             winnerReveal = true;
-             _payToWinner(0);
+            _payToWinner(0);
         }
         else if (idx==1) {
             revealAnswer(bytes32(p1Choice), bytes32(salt));
             winnerReveal = true;
-             _payToWinner(1);
+            _payToWinner(1);
         }
     }
 
@@ -97,10 +102,6 @@ contract RPS is CommitReveal{
         }    
         else if (winner==1 && idxRevealed==1) {
             account1.transfer(reward);
-        }
-        else if (winner==2) {
-            account0.transfer(reward / 2);
-            account1.transfer(reward / 2);
         }
         _resetState();
     }
