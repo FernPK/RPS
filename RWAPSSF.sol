@@ -4,7 +4,7 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import './CommitReveal.sol';
 
-contract RPS is CommitReveal{
+contract RWAPSSF is CommitReveal{
     struct Player {
         bytes32 choiceHash; // zero - undefined, not zero - defined
         address addr;
@@ -13,18 +13,20 @@ contract RPS is CommitReveal{
     uint public reward = 0;
     mapping (uint => Player) public player;
     uint public numInput = 0;
-    uint private p0Choice = 3;
-    uint private p1Choice = 3;
-    uint public winner = 3; // 0 - p0 win, 1 - p1 win , 2 - tie, 3 - undefined
+    uint private p0Choice = 7;
+    uint private p1Choice = 7;
+    uint private p2Choice = 7;
+    uint public winner = 6; // 0 - p0 win, 1 - p1 win , 2 - p2 win
     uint public tsAddP0 = 0;
     uint public tsAddP1 = 0;
+    uint public tsAddP2 = 0;
     uint public tsInputP0 = 0;
     uint public tsInputP1 = 0;
+    uint public tsInputP2 = 0;
     uint public tsResult = 0;
-    bool public winnerReveal = false;
 
     function addPlayer() public payable {
-        require(numPlayer < 2);
+        require(numPlayer < 3);
         require(msg.value == 1 ether);
         reward += msg.value;
         player[numPlayer].addr = msg.sender;
@@ -32,78 +34,121 @@ contract RPS is CommitReveal{
         if (numPlayer==0) {
             tsAddP0 = block.timestamp;
         }
-        else {
+        else if (numPlayer==1){
             tsAddP1 = block.timestamp;
+        }
+        else if (numPlayer==2){
+            tsAddP2 = block.timestamp;
         }
         numPlayer++;
     }
 
-    function input(uint choice, uint idx, uint salt) public  {
+    function input(bytes32 choiceHash, uint idx) public  {
         // choice 0 - rock, 1 - water, 2 - air, 3 - paper, 4 - sponge, 5 - scissors, 6 - fire
-        require(numPlayer == 2);
+        require(numPlayer == 3);
         require(msg.sender == player[idx].addr);
-        require(idx==0 || idx==1);
-        require(choice < 7);
-        require(block.timestamp <= tsAddP1 + 1 hours);
+        require(idx==0 || idx==1 || idx==2);
+        // require(choice < 7);
+        require(block.timestamp <= tsAddP2 + 1 hours);
         if (idx==0) {
-            p0Choice = choice;
+            // p0Choice = choice;
             tsInputP0 = block.timestamp;
         }
         else if (idx==1){
-            p1Choice = choice;
+            // p1Choice = choice;
             tsInputP1 = block.timestamp;
         }
-        player[idx].choiceHash = getSaltedHash(bytes32(choice), bytes32(salt));
+        else if (idx==2){
+            tsInputP2 = block.timestamp;
+        }
+        player[idx].choiceHash = choiceHash;
         commit(player[idx].choiceHash);
         numInput++;
-        if (numInput == 2) {
-            _checkWinner();
-        }
     }
 
-    function _checkWinner() private {
-        address payable account0 = payable(player[0].addr);
-        address payable account1 = payable(player[1].addr); 
+    function checkWinner() public {
+        require(commits[player[0].addr].revealed == true && commits[player[1].addr].revealed && commits[player[2].addr].revealed);
         if ((p0Choice + 1) % 7 == p1Choice || (p0Choice + 2) % 7 == p1Choice || (p0Choice + 3) % 7 == p1Choice) { //p0 lose, p1 win
-            winner = 1;
+            if ((p2Choice + 1) % 7 == p1Choice || (p2Choice + 2) % 7 == p1Choice || (p2Choice + 3) % 7 == p1Choice){ //p2 lose, p1 win
+                winner = 1;
+            }
+            else if ((p1Choice + 1) % 7 == p2Choice || (p1Choice + 2) % 7 == p2Choice || (p1Choice + 3) % 7 == p2Choice){ // p2 win, p1 lose
+                winner = 2;
+            }
+            else { // p2 & p1 tie
+                winner = 3;
+            }
         }
-        else if ((p1Choice + 1) % 7 == p0Choice || (p1Choice + 2) % 7 == p0Choice || (p1Choice + 3) % 7 == p0Choice) { //p1 lose, p0 win
-            winner = 0;  
+        if ((p1Choice + 1) % 7 == p0Choice || (p1Choice + 2) % 7 == p0Choice || (p1Choice + 3) % 7 == p0Choice) { //p1 lose, p0 win
+            if ((p2Choice + 1) % 7 == p0Choice || (p2Choice + 2) % 7 == p0Choice || (p2Choice + 3) % 7 == p0Choice) { //p2 lose, p0 win
+                winner = 0;
+            }
+            else if ((p0Choice + 1) % 7 == p2Choice || (p0Choice + 2) % 7 == p2Choice || (p0Choice + 3) % 7 == p2Choice) { //p2 win, p0 lose
+                winner = 2;
+            }
+            else { // p2 & p0 tie
+                winner = 4;
+            }
         }
-        else {
-            winner = 2; // tie
-            account0.transfer(reward / 2);
-            account1.transfer(reward / 2);
-            _resetState();
+        else { // p0 & p1 tie
+            if ((p2Choice + 1) % 7 == p0Choice || (p2Choice + 2) % 7 == p0Choice || (p2Choice + 3) % 7 == p0Choice) { //p2 lose, p0 win
+                winner = 0;
+            }
+            else if ((p0Choice + 1) % 7 == p2Choice || (p0Choice + 2) % 7 == p2Choice || (p0Choice + 3) % 7 == p2Choice) { //p2 win, p0 lose
+                winner = 2;
+            }
+            else {
+                winner = 5; // tie
+            }
         }
         tsResult = block.timestamp;
     }
 
-    function revealChoice(uint idx, uint salt) public {
+    function revealChoice(uint idx, uint salt, uint choice) public {
+        require(choice < 7);
         require(msg.sender == player[idx].addr);
-        require(idx==0 || idx==1);
-        require(winner<3);
+        require(idx==0 || idx==1 || idx==2);
+        require(winner<4);
         require(block.timestamp <= tsResult + 1 hours);
         if (idx==0){
+            p0Choice = choice;
             revealAnswer(bytes32(p0Choice), bytes32(salt));
-            winnerReveal = true;
-            _payToWinner(0);
         }
         else if (idx==1) {
+            p1Choice = choice;
             revealAnswer(bytes32(p1Choice), bytes32(salt));
-            winnerReveal = true;
-            _payToWinner(1);
+        }
+        else if (idx==2) {
+            p2Choice = choice;
+            revealAnswer(bytes32(p2Choice), bytes32(salt));
         }
     }
 
-    function _payToWinner(uint idxRevealed) private {
+    function payToWinner() public {
         address payable account0 = payable(player[0].addr);
-        address payable account1 = payable(player[1].addr);    
-        if (winner==0 && idxRevealed==0) {
+        address payable account1 = payable(player[1].addr);  
+        address payable account2 = payable(player[2].addr);   
+        if (winner==0 ) {
             account0.transfer(reward);
         }    
-        else if (winner==1 && idxRevealed==1) {
+        else if (winner==1) {
             account1.transfer(reward);
+        }
+        else if (winner==2) {
+            account2.transfer(reward);
+        }
+        else if (winner==3) {
+            account1.transfer(reward/2);
+            account2.transfer(reward/2);
+        }
+        else if (winner==4) {
+            account0.transfer(reward/2);
+            account2.transfer(reward/2);
+        }
+        else if (winner==5) {
+            account0.transfer(reward/3);
+            account1.transfer(reward/3);
+            account2.transfer(reward/3);
         }
         _resetState();
     }
@@ -112,48 +157,29 @@ contract RPS is CommitReveal{
         numPlayer = 0;
         reward = 0;
         numInput = 0;
-        p0Choice = 3;
-        p1Choice = 3;
-        winner = 3;
+        p0Choice = 7;
+        p1Choice = 7;
+        p2Choice = 7;
+        winner = 6;
         tsAddP0 = 0;
         tsAddP1 = 0;
+        tsAddP2 = 0;
         tsInputP0 = 0;
         tsInputP1 = 0;
+        tsInputP2 = 0;
         tsResult = 0;
-        winnerReveal = false;
     }
 
-    function withdraw(uint idx) public {
-        require(msg.sender == player[idx].addr);
-        require(idx==0 || idx==1);
+    function withdraw() public {
+        require(tsResult == 0);
         address payable account0 = payable(player[0].addr);
         address payable account1 = payable(player[1].addr);
-        if (block.timestamp > tsAddP0 + 1 hours && tsAddP1 == 0) {
-            // only one player
-            account0.transfer(reward);
-            _resetState();
-        }
-        else if (block.timestamp > tsAddP1 + 1 hours && (tsInputP0==0 || tsInputP1==0)) {
+        address payable account2 = payable(player[2].addr);
+        if (block.timestamp > tsAddP2 + 1 hours && (tsInputP0==0 || tsInputP1==0 || tsInputP2==0)) {
             // there's a player who did not choose the choice
-            if (tsInputP0==0 && tsInputP1!=0) {
-                // P0 did not choose
-                account1.transfer(reward);
-            }
-            else if (tsInputP0!=0 && tsInputP1==0) {
-                // P1 did not choose
-                account0.transfer(reward);
-            }
-            else {
-                // Both players did not choose
-                account0.transfer(reward / 2);
-                account1.transfer(reward / 2);
-            }
-            _resetState();
-        }
-        else if (block.timestamp > tsResult + 1 hours && winnerReveal == false) {
-            // winner did not reveal answer
             account0.transfer(reward / 2);
             account1.transfer(reward / 2);
+            account2.transfer(reward / 2);
             _resetState();
         }
     }
@@ -167,7 +193,11 @@ contract RPS is CommitReveal{
             require(numPlayer > 1);
             return 1;
         }
-        return 2; // not a player
+        else if (player[2].addr == msg.sender) {
+            require(numPlayer > 2);
+            return 2;
+        }
+        return 3; // not a player
     }
 
 }
